@@ -28,8 +28,15 @@ resourceExhausted(
       const void *reserved,
       const char *description)
 {
-   fprintf(stderr, "ResourceExhausted: killing current process!\n");
-   kill(getpid(), SIGKILL);
+      fprintf(stderr, "ERROR: GetEnv failed: %d %d\n", flags, JVMTI_RESOURCE_EXHAUSTED_THREADS);
+   if (flags == JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR || JVMTI_RESOURCE_EXHAUSTED_THREADS) {
+      kill(getpid(), SIGQUIT);
+      sleep(5);
+      kill(getpid(), SIGKILL);
+   }
+   else {
+      kill(getpid(), SIGKILL);
+   }
 }
 
 JNIEXPORT jint JNICALL
