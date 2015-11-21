@@ -20,12 +20,20 @@ all:
 clean:
 	rm -f $(TARGET)
 	rm -f *.class
-	rm -f *.hprof
+	rm -f tests
 
 test: all
+	gcc -g -Wall -Werror $(INCLUDE) -ldl -o tests tests.c
+	./tests 
+	$(JAVA_HOME)/bin/javac JvmKillTestThreads.java
+	$(JAVA_HOME)/bin/java -Xmx1m \
+	    -agentpath:$(PWD)/$(TARGET) \
+	    -cp $(PWD) JvmKillTestThreads
+	$(JAVA_HOME)/bin/java -Xmx1m \
+	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2 \
+	    -cp $(PWD) JvmKillTestThreads
 	$(JAVA_HOME)/bin/javac JvmKillTest.java
 	$(JAVA_HOME)/bin/java -Xmx1m \
-	    -XX:+HeapDumpOnOutOfMemoryError \
-	    -XX:OnOutOfMemoryError='/bin/echo hello' \
-	    -agentpath:$(PWD)/$(TARGET) \
+	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2 \
 	    -cp $(PWD) JvmKillTest
+
