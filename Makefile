@@ -24,8 +24,8 @@ clean:
 
 test: all
 	gcc -g -Wall -Werror $(INCLUDE) -ldl -o tests tests.c
-	./tests 
-	$(JAVA_HOME)/bin/javac JvmKillTestThreads.java
+	#./tests 
+	$(JAVA_HOME)/bin/javac -debug JvmKillTestThreads.java
 	$(JAVA_HOME)/bin/java -Xmx1m \
 	    -agentpath:$(PWD)/$(TARGET) \
 	    -cp $(PWD) JvmKillTestThreads

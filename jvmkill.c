@@ -21,6 +21,7 @@
 #include <time.h>
 
 #include "jvmkill.h"
+#include "threads.c"
 
 enum {
     TIME_OPT = 0,
@@ -56,6 +57,7 @@ resourceExhausted(
      current_timestamp = evaluated;
    }
    if (count > configuration.count_threshold) {
+	printThreadDump(jvmti_env);
    	kill(getpid(), configuration.signal);
         fprintf(stderr, "killing current process\n");
    }
