@@ -8,7 +8,7 @@ else
   INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
 endif
 
-CFLAGS=-Wall -Werror -fPIC -shared $(INCLUDE)
+CFLAGS=-g -Wall -Werror -fPIC -shared $(INCLUDE)
 TARGET=libjvmkill.so
 
 .PHONY: all clean test

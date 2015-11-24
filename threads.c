@@ -1,66 +1,75 @@
 #include "threads.h"
 
-static void JNICALL printFrame(jvmtiEnv* jvmti, jvmtiFrameInfo frame) {
-  jvmtiError err;
-  char *methodName, *className, *cleanClassName;
+static char* getFileName(jvmtiEnv* jvmti, jclass declaringClass) {
   char *fileName;
-  int si, li, lineNumber;
+
+  (*jvmti)->GetSourceFileName(jvmti, declaringClass, &fileName);
+  return fileName;
+}
+
+static char* clearClassName(char* className) {
+  int i;
+  char* cleanClassName = strdup(className + 1);
+
+  i = 0;
+  while (cleanClassName[i]) {
+    if (cleanClassName[i] == '/') {
+      cleanClassName[i] = '.';
+    } else if (cleanClassName[i] == ';') {
+      cleanClassName[i] = '.';
+    }
+    i++;
+  }
+  return cleanClassName;
+}
+
+static void JNICALL printFrame(jvmtiEnv* jvmti, jvmtiFrameInfo frame) {
+  char *methodName, *className, *cleanClassName, *fileName;
+  int lineNumber;
   jclass declaringClass;
-  jint locationCount;
-  jvmtiLineNumberEntry* locationTable;
 
 
 
   (*jvmti)->GetMethodName(jvmti, frame.method, &methodName, NULL, NULL);
   (*jvmti)->GetMethodDeclaringClass(jvmti, frame.method, &declaringClass);
   (*jvmti)->GetClassSignature(jvmti, declaringClass, &className, NULL);
-  err = (*jvmti)->GetSourceFileName(jvmti, declaringClass, &fileName);
-  if (err == JVMTI_ERROR_NATIVE_METHOD || err == JVMTI_ERROR_ABSENT_INFORMATION) {
-    fileName = strdup("Unknown");
+  lineNumber = 1;
+  fileName = getFileName(jvmti, declaringClass);
 
-  } else {
-    char *temp;
-
-    temp = strdup(fileName);
-    //(*jvmti)->Deallocate(jvmti, (void*) fileName);
-    fileName = temp;
-  }
-  err = (*jvmti)->GetLineNumberTable(jvmti, frame.method, &locationCount, &locationTable);
-  if (err == JVMTI_ERROR_NATIVE_METHOD || err == JVMTI_ERROR_ABSENT_INFORMATION) {
-    lineNumber = 0;
-  } else {
-    lineNumber = 0;
-    for (li = 0; li < locationCount; li++) {
-      if (locationTable[li].start_location > frame.location) {
-        break;
-      }
-      lineNumber = locationTable[li].line_number;
-    }
-    //(*jvmti)->Deallocate(jvmti, (void*) locationTable);
-  }
-
-  cleanClassName = strdup(className + 1);
-  si = 0;
-  while (cleanClassName[si]) {
-    if (cleanClassName[si] == '/') {
-      cleanClassName[si] = '.';
-    } else if (cleanClassName[si] == ';') {
-      cleanClassName[si] = '.';
-    }
-    si++;
-  }
+  cleanClassName = clearClassName(className);
 
   if (lineNumber) {
     fprintf(stdout, "\tat %s%s(%s:%d)\n", cleanClassName, methodName, fileName, lineNumber);
   } else {
     fprintf(stdout, "\tat %s%s(%s)\n", cleanClassName, methodName, fileName);
   }
-  (*jvmti)->Deallocate(jvmti, (void*) methodName);
-  (*jvmti)->Deallocate(jvmti, (void*) className);
-  free(fileName);
+  (*jvmti)->Deallocate(jvmti, (unsigned char*) methodName);
+  (*jvmti)->Deallocate(jvmti, (unsigned char*) className);
+  (*jvmti)->Deallocate(jvmti, (unsigned char*) fileName);
   free(cleanClassName);
 }
 
+static char* getThreadState(jint state) {
+    if (state & JVMTI_THREAD_STATE_SUSPENDED) {
+      return "SUSPENDED";
+    } else if (state & JVMTI_THREAD_STATE_INTERRUPTED) {
+      return "INTERRUPTED";
+    } else if (state & JVMTI_THREAD_STATE_IN_NATIVE) {
+      return "NATIVE";
+    } else if (state & JVMTI_THREAD_STATE_RUNNABLE) {
+      return "RUNNABLE";
+    } else if (state & JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER) {
+      return "BLOCKED";
+    } else if (state & JVMTI_THREAD_STATE_IN_OBJECT_WAIT) {
+      return "WAITING";
+    } else if (state & JVMTI_THREAD_STATE_PARKED) {
+      return "PARKED";
+    } else if (state & JVMTI_THREAD_STATE_SLEEPING) {
+      return "SLEEPING";
+    } else {
+      return "UNKNOWN";
+    }
+}
 
 void printThreadDump(jvmtiEnv *jvmti) {
   jvmtiStackInfo *stack_info;
@@ -68,6 +77,12 @@ void printThreadDump(jvmtiEnv *jvmti) {
   int ti;
   //jvmtiError err;
   jvmtiThreadInfo threadInfo;
+
+  jvmtiCapabilities caps;
+  memset(&caps, '\0', sizeof(caps));
+  caps.can_get_source_file_name = 1;
+  caps.can_get_line_numbers = 1;
+  (*jvmti)->AddCapabilities(jvmti, &caps);
 
   fprintf(stdout, "\n");
   (*jvmti)->GetAllStackTraces(jvmti, 150, &stack_info, &thread_count);
@@ -78,32 +93,12 @@ void printThreadDump(jvmtiEnv *jvmti) {
     jint state = infop->state;
     jvmtiFrameInfo *frames = infop->frame_buffer;
     int fi;
-    const char *threadState;
-
-    if (state & JVMTI_THREAD_STATE_SUSPENDED) {
-      threadState = "SUSPENDED";
-    } else if (state & JVMTI_THREAD_STATE_INTERRUPTED) {
-      threadState = "INTERRUPTED";
-    } else if (state & JVMTI_THREAD_STATE_IN_NATIVE) {
-      threadState = "NATIVE";
-    } else if (state & JVMTI_THREAD_STATE_RUNNABLE) {
-      threadState = "RUNNABLE";
-    } else if (state & JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER) {
-      threadState = "BLOCKED";
-    } else if (state & JVMTI_THREAD_STATE_IN_OBJECT_WAIT) {
-      threadState = "WAITING";
-    } else if (state & JVMTI_THREAD_STATE_PARKED) {
-      threadState = "PARKED";
-    } else if (state & JVMTI_THREAD_STATE_SLEEPING) {
-      threadState = "SLEEPING";
-    } else {
-      threadState = "UNKNOWN";
-    }
+    const char *threadState = getThreadState(state);
 
     (*jvmti)->GetThreadInfo(jvmti, thread, &threadInfo);
     fprintf(stdout, "#%d - %s - %s", ti + 1, threadInfo.name, threadState);
     fprintf(stdout, "\n");
-    //(*jvmti)->Deallocate(jvmti, (void*) threadInfo);
+    (*jvmti)->Deallocate(jvmti, (void*) threadInfo.name);
 
     for (fi = 0; fi < infop->frame_count; fi++) {
       printFrame(jvmti, frames[fi]);
