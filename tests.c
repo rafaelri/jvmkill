@@ -37,30 +37,38 @@ void sig_handler(int signo) {
 		sigQuit_sent = 1;
 }
 
-void setup() {
-        handle = dlopen("libjvmkill.so", RTLD_LAZY);
+void* printDlError(void *handle) {
  	if (!handle) {
         	fprintf(stderr, "%s\n", dlerror());
         	exit(EXIT_FAILURE);
     	}
+	else
+		return handle;
+}
+
+//loads agent library and fetches external function handles
+void setup() {
+        handle = printDlError(dlopen("libjvmkill.so", RTLD_LAZY));
 	parameters = malloc(sizeof(char) * 1024);
 	if (signal(moddedSignal, sig_handler) == SIG_ERR)
         	exit(EXIT_FAILURE);
 
-	resourceExhaustedFn = dlsym(handle, "resourceExhausted");
-	setParametersFn = dlsym(handle, "setParameters");
-	getTime_ThresholdFn = dlsym(handle, "getTime_Threshold");
-	getCount_ThresholdFn = dlsym(handle, "getCount_Threshold");
+	resourceExhaustedFn = printDlError(dlsym(handle, "resourceExhausted"));
+	setParametersFn = printDlError(dlsym(handle, "setParameters"));
+	getTime_ThresholdFn = printDlError(dlsym(handle, "getTime_Threshold"));
+	getCount_ThresholdFn = printDlError(dlsym(handle, "getCount_Threshold"));
 
-	setSignalFn = dlsym(handle, "setSignal");
+	setSignalFn = printDlError(dlsym(handle, "setSignal"));
 	setSignalFn(moddedSignal);
 }
 
+//unloads agent library
 void teardown() {
 	dlclose(handle);
 	free(parameters);
 }
 
+//tests agent fires signal if threshold is exceeded
 int testSendsSignalIfThresholdExceeded() {
 	sigQuit_sent=0;
 	snprintf(parameters, 1024, "%s", "time=3,count=2"); 
@@ -74,11 +82,13 @@ int testSendsSignalIfThresholdExceeded() {
 	return sigQuit_sent;
 }
 
+//tests agent doesnt fire signal if threshold is reached but not exceeded
 int testDoesntSendSignalIfThresholdNotExceeded() {
 	sigQuit_sent=0;
 	snprintf(parameters, 1024, "%s", "time=3,count=5");
 	setParametersFn(parameters);
 	sleep(6); //waits for counter to "zero" 
+	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
@@ -91,18 +101,21 @@ int testDoesntSendSignalIfThresholdNotExceeded() {
 	if (sigQuit_sent)
            fprintf(stdout, "testDoesntSendSignalIfThresholdNotExceeded FAILED\n");
 	return !sigQuit_sent;
+
 }
 
+//tests agent parameters parsing
 int testSetsUpParameters() {
 	snprintf(parameters, 1024, "%s", "time=10,count=5"); 
 	setParametersFn(parameters);
 	return ((getTime_ThresholdFn() == 10) && (getCount_ThresholdFn() == 5));
 }
 
+//tests agent default values and parameters parsing when no parameters are provided 
 int testSetsUpNoParameters() {
 	snprintf(parameters, 1024, "%s", ""); 
 	setParametersFn(parameters);
-	return (getCount_ThresholdFn() == 0);
+	return (getCount_ThresholdFn() == 0 && (getTime_ThresholdFn() == 1));
 }
 
 int main() {

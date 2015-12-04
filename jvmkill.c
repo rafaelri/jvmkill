@@ -18,26 +18,48 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <time.h>
+#include <sys/time.h>
+#include <deque>
+#include <mutex>
+
+using namespace std;
 
 #include "jvmkill.h"
 
 enum {
     TIME_OPT = 0,
-    COUNT_OPT = 1
+    COUNT_OPT,
+    THE_END
 };
  
 char *tokens[] = {
-    "time",
-    "count"
+    [TIME_OPT] = strdup("time"),
+    [COUNT_OPT] = strdup("count"),
+    [THE_END] = NULL
 };
 
-static int count;
-static time_t current_timestamp;
+static std::mutex re_mutex;
+static deque<long> events; 
 static struct Configuration configuration;
 
 void setSignal(int signal) {
    configuration.signal = signal;
+}
+long getTimeMillis() {
+   struct timeval  tv;
+   gettimeofday(&tv, NULL);
+   return (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
+}
+
+static void pruneEvents() {
+   long millisLimit = getTimeMillis()-configuration.time_threshold*1000;
+   for (int i=events.size()-1;i>0;i--) {
+     long value = events[i]; 
+     if (value >= millisLimit)
+        break;
+     else
+        events.pop_back();
+   }
 }
 void
 resourceExhausted(
@@ -46,16 +68,14 @@ resourceExhausted(
       jint flags,
       const void *reserved,
       const char *description) {
-   time_t evaluated = time(NULL)/configuration.time_threshold;
    fprintf(stderr, "ResourceExhausted!\n");
-   if (current_timestamp == evaluated) {
-     count++;
-   }
-   else {
-     count=1;
-     current_timestamp = evaluated;
-   }
-   if (count > configuration.count_threshold) {
+   std::lock_guard<std::mutex> lock(re_mutex);
+
+   pruneEvents();
+   long event = getTimeMillis();
+   events.push_front(event);
+   int eventCount = events.size();
+   if (eventCount > configuration.count_threshold) {
    	kill(getpid(), configuration.signal);
         fprintf(stderr, "killing current process\n");
    }
@@ -69,14 +89,13 @@ int setCallbacks(jvmtiEnv *jvmti) {
 
    callbacks.ResourceExhausted = &resourceExhausted;
 
-   err = (*jvmti)->SetEventCallbacks(jvmti, &callbacks, sizeof(callbacks));
+   err = jvmti->SetEventCallbacks(&callbacks, sizeof(callbacks));
    if (err != JVMTI_ERROR_NONE) {
       fprintf(stderr, "ERROR: SetEventCallbacks failed: %d\n", err);
       return JNI_ERR;
    }
 
-   err = (*jvmti)->SetEventNotificationMode(
-         jvmti, JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, NULL);
+   err = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, NULL);
    if (err != JVMTI_ERROR_NONE) {
       fprintf(stderr, "ERROR: SetEventNotificationMode failed: %d\n", err);
       return JNI_ERR;
@@ -119,7 +138,7 @@ void setParameters(char *options) {
             break;
          default:
             /* Unknown suboption. */
-            fprintf (stderr, "Unknown suboption `%s'\n", value);
+            fprintf (stderr, "Unknown suboption '%s'\n", value);
             break;
       }
 }
@@ -128,10 +147,10 @@ JNIEXPORT jint JNICALL
 Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
 {
    jvmtiEnv *jvmti;
-
+   
    configuration.signal = SIGKILL;
 
-   jint rc = (*vm)->GetEnv(vm, (void **) &jvmti, JVMTI_VERSION);
+   jint rc = vm->GetEnv((void **) &jvmti, JVMTI_VERSION);
    if (rc != JNI_OK) {
       fprintf(stderr, "ERROR: GetEnv failed: %d\n", rc);
       return JNI_ERR;
