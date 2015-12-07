@@ -22,30 +22,45 @@
 
 /**
  * Configuration struct that holds agent configuration 
+ * === time_threshold is expressed in seconds ===
  */
 struct Configuration {
-   int count_threshold; //configured event count limit
-   int time_threshold; //configured time limit for keeping events
-   int signal; //configured unix signal to be fired
+   int count_threshold;
+   int time_threshold; 
+   int signal; 
 };
 #ifdef __cplusplus
 extern "C" {
 #endif
-void setSignal(int signal); //function for overriding unix signal sent when the threshold is reached
+/*
+ * function for overriding unix signal sent when the threshold is reached
+ * === Mainly used on unit tests ===
+ */
+void setSignal(int signal); 
 
+/*
+ * resourceExhausted callback registered in the JVM
+ */
 void resourceExhausted(
       jvmtiEnv *jvmti_env,
       JNIEnv *jni_env,
       jint flags,
       const void *reserved,
-      const char *description); //resourceExhausted callback registered in the JVM
+      const char *description); 
 
-int getTime_Threshold(); //provides read access to agent Time threshold configuration
-int getCount_Threshold(); //provides read access to agent Time threshold configuration
-void setParameters(char *options); //function for configuring agent parameters 
+int getTime_Threshold(); 
+int getCount_Threshold(); 
+
+/*
+ * function that parses agent parameters
+ */
+void setParameters(char *options); 
 #ifdef __cplusplus
 }
 #endif
 
+/*
+ * Agent load callback called by the JVM
+ */
 JNIEXPORT jint JNICALL
-Agent_OnLoad(JavaVM *vm, char *options, void *reserved); //Agent load callback called by the JVM
+Agent_OnLoad(JavaVM *vm, char *options, void *reserved); 
