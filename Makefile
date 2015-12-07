@@ -34,7 +34,7 @@ ctests: build
 	gcc -g -Wall -Werror $(INCLUDE) -ldl -o tests tests.c
 	./tests
 
-threadtests: threadtestbasic threadtest0 threadtest-10-2
+threadtests: threadtestbasic threadtest0 threadtest-10-2 threadtestpspawn-10-2
 
 threadtest0: build
 	@echo "=============================================="
@@ -73,3 +73,10 @@ threadtestbasic: build
 	!($(JAVA_HOME)/bin/java \
 	    -agentpath:$(PWD)/$(TARGET) \
 	    -cp $(PWD) JvmKillTest2)
+
+threadtestpspawn-10-2: build
+	@echo "=============================================="
+	$(JAVA_HOME)/bin/javac JvmKillTestThreadsParallel.java
+	!($(JAVA_HOME)/bin/java \
+	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2 \
+	    -cp $(PWD) JvmKillTestThreadsParallel)
