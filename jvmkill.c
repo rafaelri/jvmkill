@@ -19,10 +19,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <deque>
-#include <mutex>
-
-using namespace std;
 
 #include "jvmkill.h"
 
@@ -38,29 +34,39 @@ char *tokens[] = {
     [THE_END] = NULL
 };
 
-static std::mutex re_mutex;
-static deque<long> events; 
+static long *events; 
+static int eventIndex = 0;
 static struct Configuration configuration;
 
 void setSignal(int signal) {
    configuration.signal = signal;
 }
-long getTimeMillis() {
+static long getTimeMillis() {
    struct timeval  tv;
    gettimeofday(&tv, NULL);
    return (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
 }
+static long getMillisLimit() {
+   return getTimeMillis()-configuration.time_threshold*1000;
+}
 
-static void pruneEvents() {
-   long millisLimit = getTimeMillis()-configuration.time_threshold*1000;
-   for (int i=events.size()-1;i>0;i--) {
-     long value = events[i]; 
-     if (value >= millisLimit)
-        break;
-     else
-        events.pop_back();
+static void addEvent() {
+   events[eventIndex]=getTimeMillis();
+   if (++eventIndex>=configuration.count_threshold) {
+      eventIndex=0;
    }
 }
+
+static int countEvents() {
+   long millisLimit = getMillisLimit();
+   int count = 0;
+   for (int i=0;i<configuration.count_threshold;i++) {
+      if (events[i]>=millisLimit)
+	 count++;
+   }
+   return count;
+}
+
 void
 resourceExhausted(
       jvmtiEnv *jvmti_env,
@@ -68,17 +74,15 @@ resourceExhausted(
       jint flags,
       const void *reserved,
       const char *description) {
-   fprintf(stderr, "ResourceExhausted!\n");
-   std::lock_guard<std::mutex> lock(re_mutex);
 
-   pruneEvents();
-   long event = getTimeMillis();
-   events.push_front(event);
-   int eventCount = events.size();
-   if (eventCount > configuration.count_threshold) {
-   	kill(getpid(), configuration.signal);
+   int eventCount = countEvents();
+   fprintf(stderr, "ResourceExhausted! (%d/%d)\n", eventCount+1, configuration.count_threshold);
+   //eventCount was already on threshold before adding the current one
+   if (eventCount == configuration.count_threshold) {
         fprintf(stderr, "killing current process\n");
+   	kill(getpid(), configuration.signal);
    }
+   addEvent();
 }
 
 int setCallbacks(jvmtiEnv *jvmti) {
@@ -141,6 +145,14 @@ void setParameters(char *options) {
             fprintf (stderr, "Unknown suboption '%s'\n", value);
             break;
       }
+   events = new long[configuration.count_threshold];
+
+   //prefill with a safe value
+   long invalidMillisLimit = getMillisLimit()-1;
+   for (int i=0;i<configuration.count_threshold;i++) {
+	   events[i]=invalidMillisLimit;
+   }
+
 }
 
 JNIEXPORT jint JNICALL

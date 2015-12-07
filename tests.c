@@ -73,7 +73,6 @@ int testSendsSignalIfThresholdExceeded() {
 	sigQuit_sent=0;
 	snprintf(parameters, 1024, "%s", "time=3,count=2"); 
 	setParametersFn(parameters);
-	sleep(6); //waits for counter to "zero" 
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
@@ -87,7 +86,6 @@ int testDoesntSendSignalIfThresholdNotExceeded() {
 	sigQuit_sent=0;
 	snprintf(parameters, 1024, "%s", "time=3,count=5");
 	setParametersFn(parameters);
-	sleep(6); //waits for counter to "zero" 
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
 	resourceExhaustedFn(NULL,NULL,5,NULL,NULL);
