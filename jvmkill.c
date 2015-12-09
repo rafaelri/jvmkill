@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/time.h>
+#include <time.h>
 
 #include "jvmkill.h"
 
@@ -42,9 +42,9 @@ void setSignal(int signal) {
    configuration.signal = signal;
 }
 static long getTimeMillis() {
-   struct timeval  tv;
-   gettimeofday(&tv, NULL);
-   return (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (ts.tv_sec*1000)+(ts.tv_nsec/1000000);
 }
 static long getMillisLimit() {
    return getTimeMillis()-configuration.time_threshold*1000;
@@ -61,7 +61,7 @@ static int countEvents() {
    long millisLimit = getMillisLimit();
    int count = 0;
    for (int i=0;i<configuration.count_threshold;i++) {
-      if (events[i]>=millisLimit)
+      if (events[i] != 0 && events[i]>=millisLimit) 
 	 count++;
    }
    return count;
@@ -146,13 +146,10 @@ void setParameters(char *options) {
             break;
       }
    events = new long[configuration.count_threshold];
-
    //prefill with a safe value
-   long invalidMillisLimit = getMillisLimit()-1;
    for (int i=0;i<configuration.count_threshold;i++) {
-	   events[i]=invalidMillisLimit;
+          events[i]=0;
    }
-
 }
 
 JNIEXPORT jint JNICALL
