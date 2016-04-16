@@ -12,26 +12,24 @@
  * limitations under the License.
  */
 
-#ifndef killaction_h
-#define killaction_h
+#ifndef heaphistogramaction_h
+#define heaphistogramaction_h
 
 #include "action.h"
+#include <jvmti.h>
 
-class KillAction: public Action
+class HeapHistogramAction: public Action
 {
 public:
-   KillAction();
+   HeapHistogramAction(jvmtiEnv *jvmti);
 
    void act();
-
-   void setSignal(int signal);
-
 private:
-   int signal;
+   jvmtiEnv* jvmti;
 };
 
-static inline Action* createKillAction() {
-    return new KillAction();
+static inline Action* createHeapHistogramAction(jvmtiEnv *jvmti) {
+    return new HeapHistogramAction(jvmti);
 }
 
-#endif // killaction_h
+#endif // heaphistogramaction_h

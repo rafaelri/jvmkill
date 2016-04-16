@@ -19,9 +19,9 @@ TARGET=libjvmkill.so
 
 all: build alltests
 
-build:	
+build:
 	@echo "=============================================="
-	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++
+	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++ base.c++ memory.c++ heaphistogramaction.c++ 
 	chmod 644 $(TARGET)
 
 clean:

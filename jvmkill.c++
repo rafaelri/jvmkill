@@ -16,17 +16,18 @@
 #include "heuristic.h"
 #include "jvmkill.h"
 #include "killaction.h"
+#include "heaphistogramaction.h"
 #include "threshold.h"
 
 static jrawMonitorID monitorID;
 static Heuristic* heuristic;
-static Action* action;
+static Action* actions[2];
 
 void setSignal(int signal) {
-  if (action == NULL) {
-    action = createAction();
+  if (actions[1] == NULL) {
+    actions[1] = createKillAction();
   }
-  ((KillAction*)action)->setSignal(signal);
+  ((KillAction*)actions[1])->setSignal(signal);
 }
 
 void resourceExhausted(
@@ -44,7 +45,9 @@ void resourceExhausted(
    }
 
    if (heuristic->onOOM()) {
-      action->act();
+     for (int i=0;i <= 2;i++) {
+       actions[i]->act();
+     }
    }
 
    err = jvmti_env->RawMonitorExit(monitorID);
@@ -78,7 +81,7 @@ int setCallbacks(jvmtiEnv *jvmti) {
       fprintf(stderr, "ERROR: SetEventNotificationMode failed: %d\n", err);
       return JNI_ERR;
    }
-   
+
    return JNI_OK;
 }
 
@@ -97,8 +100,11 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
       return JNI_ERR;
    }
    setParameters(options);
-   if (action == NULL) {
-    action = createAction();
+   if (actions[0] == NULL) {
+    actions[0] = createHeapHistogramAction(jvmti);
+   }
+   if (actions[1] == NULL) {
+    actions[1] = createKillAction();
    }
    return setCallbacks(jvmti);
 }
@@ -110,5 +116,3 @@ int getTime_Threshold() {
 int getCount_Threshold() {
   return ((Threshold*)heuristic)->getCount_Threshold();
 }
-
-
