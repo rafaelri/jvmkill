@@ -23,13 +23,6 @@ static jrawMonitorID monitorID;
 static Heuristic* heuristic;
 static Action* actions[2];
 
-void setSignal(int signal) {
-  if (actions[1] == NULL) {
-    actions[1] = createKillAction();
-  }
-  ((KillAction*)actions[1])->setSignal(signal);
-}
-
 void resourceExhausted(
       jvmtiEnv *jvmti_env,
       JNIEnv *jni_env,
@@ -107,12 +100,4 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
     actions[1] = createKillAction();
    }
    return setCallbacks(jvmti);
-}
-
-int getTime_Threshold() {
-  return ((Threshold*)heuristic)->getTime_Threshold();
-}
-
-int getCount_Threshold() {
-  return ((Threshold*)heuristic)->getCount_Threshold();
 }

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include <sys/types.h>
 #include <signal.h>
 #include <stdio.h>
@@ -38,50 +38,7 @@ int clock_gettime(int clk_id, struct timespec *t){
 #include <time.h>
 #endif
 
-enum {
-    TIME_OPT = 0,
-    COUNT_OPT,
-    THE_END
-};
- 
-char *tokens[] = {
-    [TIME_OPT] = strdup("time"),
-    [COUNT_OPT] = strdup("count"),
-    [THE_END] = NULL
-};
-
 Threshold::Threshold(const char *opts) {
-   //sets defaults
-   count_threshold = 0;
-   time_threshold = 1;
-
-   if (opts != NULL) {
-      // Copy input options since getsubopt modifies its input
-      char *subopts = new char[strlen(opts) + 1];
-      strcpy(subopts, opts);
-
-      char *value;
-
-      while (*subopts != '\0') {
-         switch (getsubopt (&subopts, tokens, &value)) {
-            case COUNT_OPT:
-               if (value == NULL)
-                  abort ();
-               count_threshold = atoi (value);
-               break;
-
-            case TIME_OPT:
-               if (value == NULL)
-                  abort ();
-               time_threshold = atoi (value);
-               break;
-
-            default:
-               fprintf (stderr, "Unknown suboption '%s'\n", value);
-               break;
-         }
-      }
-   }
    eventIndex = 0;
    events = new long[count_threshold + 1];
    //prefill with a safe value

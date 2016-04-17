@@ -21,7 +21,7 @@ all: build alltests
 
 build:
 	@echo "=============================================="
-	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++ base.c++ memory.c++ heaphistogramaction.c++ 
+	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++ base.c++ memory.c++ heaphistogramaction.c++
 	chmod 644 $(TARGET)
 
 clean:
@@ -46,6 +46,11 @@ thresholdctests: build
 killactionctests: build
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o killactiontests killactiontests.c++ killaction.c++
 	./killactiontests
+
+parameterparserctests: 
+	g++ -g -Wall -Werror $(INCLUDE) -ldl -o parameterparsertests parametersparsertests.c++ parametersparser.c++
+	./parameterparsertests
+
 
 threadtests: threadtestbasic threadtest0 threadtest-10-2 threadtestpspawn-10-2
 
