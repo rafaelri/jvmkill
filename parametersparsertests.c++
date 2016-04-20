@@ -32,28 +32,68 @@ void teardown() {
 
 bool testsDefaults() {
 	AgentParameters params = parser->parse(strdup(""));
-	return ((params.time_threshold == 1) && (params.count_threshold == 0));
+	bool passed = ((params.time_threshold == 1) && (params.count_threshold == 0));
+  if (!passed) {
+     fprintf(stdout, "testsDefaults FAILED\n");
+  }	return passed;
 }
 
 bool testsParsesTimeThreshold() {
 	AgentParameters params = parser->parse(strdup("time=99"));
-	return (params.time_threshold == 99);
+	bool passed = (params.time_threshold == 99);
+  if (!passed) {
+     fprintf(stdout, "testsParsesTimeThreshold FAILED\n");
+  }	return passed;
 }
 
 bool testsParsesCountThreshold() {
 	AgentParameters params = parser->parse(strdup("count=88"));
-	return (params.time_threshold == 88);
+	bool passed = (params.time_threshold == 88);
+  if (!passed) {
+     fprintf(stdout, "testsParsesCountThreshold FAILED\n");
+  }	return passed;
 }
 
 bool testsParsesPrintHeapHistogramOn() {
 	AgentParameters params = parser->parse(strdup("printHeapHistogram=1"));
-	return (params.print_heap_histogram == true);
+	bool passed = (params.print_heap_histogram == true);
+  if (!passed) {
+     fprintf(stdout, "testsParsesPrintHeapHistogramOn FAILED\n");
+  }	return passed;
 }
 
 bool testsParsesPrintHeapHistogramOff() {
 	AgentParameters params = parser->parse(strdup("printHeapHistogram=0"));
-	return (params.print_heap_histogram == false);
+	bool passed = (params.print_heap_histogram == false);
+  if (!passed) {
+     fprintf(stdout, "testsParsesPrintHeapHistogramOff FAILED\n");
+  }	return passed;
 }
+//
+// bool testConstructionWithParameters() {
+// 	Threshold *threshold = new Threshold("time=10,count=5");
+// 	bool passed = ((threshold->getCount_Threshold() == 5) && (threshold->getTime_Threshold() == 10));
+//     if (!passed) {
+//        fprintf(stdout, "testConstructionWithParameters FAILED\n");
+//     }	return passed;
+// }
+//
+// bool testConstructionWithNullPointer() {
+// 	Threshold *threshold = new Threshold(0);
+// 	bool passed = ((threshold->getCount_Threshold() == 0) && (threshold->getTime_Threshold() == 1));
+//     if (!passed) {
+//        fprintf(stdout, "testConstructionWithNullPointer FAILED\n");
+//     }	return passed;
+// }
+//
+// bool testConstructionWithNoParameters() {
+// 	Threshold *threshold = new Threshold("");
+// 	bool passed = ((threshold->getCount_Threshold() == 0) && (threshold->getTime_Threshold() == 1));
+//     if (!passed) {
+//        fprintf(stdout, "testConstructionWithNoParameters FAILED\n");
+//     }	return passed;
+// }
+
 
 int main() {
 	setup();

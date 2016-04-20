@@ -20,7 +20,7 @@
 class Threshold: public Heuristic
 {
 public:
-   Threshold(const char *options);
+   Threshold(AgentParameters param);
 
    bool onOOM();
 
@@ -32,19 +32,17 @@ public:
 
 private:
    // circular buffer containing the timestamps of up to count_threshold + 1 OOMs
-   long *events; 
+   long *events;
    int eventIndex;
-
-   int count_threshold;
-   int time_threshold;  // seconds
+   AgentParameters parameters;
 
    void addEvent();
    int countEvents();
    long getMillisLimit();
 };
 
-static inline Heuristic* createHeuristic(char *options) {
-    return new Threshold(options);
+static inline Heuristic* createHeuristic(AgentParameters params) {
+    return new Threshold(params);
 }
 
 #endif // threshold_h

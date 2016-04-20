@@ -39,7 +39,7 @@ ctests: build thresholdctests killactionctests
 	gcc -g -Wall -Werror $(INCLUDE) $(ASNEEDED) -ldl -o tests tests.c
 	./tests
 
-thresholdctests: build
+thresholdctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o thresholdtests thresholdtests.c++ threshold.c++
 	./thresholdtests
 
@@ -47,7 +47,11 @@ killactionctests: build
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o killactiontests killactiontests.c++ killaction.c++
 	./killactiontests
 
-parameterparserctests: 
+agentcontrolerctests:
+	g++ -g -Wall -Werror $(INCLUDE) -ldl -o agentcontrollertests agentcontrollertests.c++ agentcontroller.c++
+	./agentcontrollertests
+
+parameterparserctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o parameterparsertests parametersparsertests.c++ parametersparser.c++
 	./parameterparsertests
 

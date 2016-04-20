@@ -13,51 +13,48 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h> //sleep
+
+#include <jvmti.h>
+
+#include "agentcontroller.h"
 #include "parameters.h"
 #include "heuristic.h"
 #include "threshold.h"
+#include "heaphistogramaction.h"
+#include "action.h"
+static int MockPrintHeapActionCount = 0;
+static int MockPrintHeapActionRunCount = 0;
+AgentController* agentController;
+jvmtiEnv* jvm;
+//mock
+HeapHistogramAction::HeapHistogramAction(jvmtiEnv* jvm) {
+	MockPrintHeapActionCount++;
+}
+void HeapHistogramAction::act() {
+	MockPrintHeapActionRunCount++;
+}
 
-bool testTriggersIfThresholdExceeded() {
+//incluir mock com o createNewHeapHistogramAction para testar (nao existe instanceof no C++)
+void setup() {
+	agentController = new AgentController(NULL);
+}
+
+bool testDoesNotAddHeapActionWhenOff() {
 	AgentParameters params;
-	params.time_threshold=3;
-	params.count_threshold=2;
-	Heuristic *threshold = new Threshold(params);
-
-	bool passed = !threshold->onOOM() &&
-	              !threshold->onOOM() &&
-	              threshold->onOOM();
+	params.print_heap_histogram = false;
+	agentController->setParameters(params);
+  bool passed = MockPrintHeapActionCount > 0;
     if (!passed) {
        fprintf(stdout, "testTriggersIfThresholdExceeded FAILED\n");
     }
 	return passed;
 }
 
-bool testDoesNotTriggerIfThresholdNotExceeded() {
-	AgentParameters params;
-	params.time_threshold=1;
-	params.count_threshold=2;
-	Heuristic *threshold = new Threshold(params);
-
-	bool passed = !threshold->onOOM() &&
-	              !threshold->onOOM();
-  if (!passed) {
-     fprintf(stdout, "testTriggersIfThresholdExceeded FAILED\n");
-		 return passed;
-  }
-	sleep(2);
-	passed = !threshold->onOOM() &&
-	              !threshold->onOOM();
-	if (!passed) {
-	  fprintf(stdout, "testTriggersIfThresholdExceeded FAILED\n");
-	}
-	return passed;
-}
 
 
 int main() {
-	bool result = (testTriggersIfThresholdExceeded() &&
-		           testDoesNotTriggerIfThresholdNotExceeded());
+  setup();
+	bool result = (testDoesNotAddHeapActionWhenOff());
 	if (result) {
        fprintf(stdout, "SUCCESS\n");
 	   exit(EXIT_SUCCESS);

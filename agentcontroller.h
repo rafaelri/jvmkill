@@ -12,20 +12,28 @@
  * limitations under the License.
  */
 
-#ifndef heaphistogramaction_h
-#define heaphistogramaction_h
+#ifndef agentcontroller_h
+#define agentcontroller_h
 
-#include "action.h"
 #include <jvmti.h>
 
-class HeapHistogramAction: public Action
-{
-public:
-   HeapHistogramAction(jvmtiEnv *jvmti);
+#include "parameters.h"
+#include "action.h"
+#include "heuristic.h"
 
-   void act();
+class AgentController {
+public:
+   AgentController(jvmtiEnv* jvm);
+   void setup(char *options);
+   void setParameters(AgentParameters parameters);
+   void onOOM();
+   Action* getConfiguredActions();
+   int getConfiguredActionsCount();
 private:
-   jvmtiEnv* jvmti;
+  jvmtiEnv* jvmti;
+  Heuristic* heuristic;
+  Action* actions;
 };
 
-#endif // heaphistogramaction_h
+
+#endif // agentcontroller_h

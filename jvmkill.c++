@@ -20,8 +20,6 @@
 #include "threshold.h"
 
 static jrawMonitorID monitorID;
-static Heuristic* heuristic;
-static Action* actions[2];
 
 void resourceExhausted(
       jvmtiEnv *jvmti_env,

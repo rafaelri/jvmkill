@@ -19,6 +19,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "parameters.h"
 #include "threshold.h"
 #include "heuristic.h"
 
@@ -38,11 +39,12 @@ int clock_gettime(int clk_id, struct timespec *t){
 #include <time.h>
 #endif
 
-Threshold::Threshold(const char *opts) {
+Threshold::Threshold(AgentParameters param) {
+   parameters = param;
    eventIndex = 0;
-   events = new long[count_threshold + 1];
+   events = new long[parameters.count_threshold + 1];
    //prefill with a safe value
-   for (int i=0; i <= count_threshold; i++) {
+   for (int i=0; i <= parameters.count_threshold; i++) {
           events[i]=0;
    }
 
@@ -55,12 +57,12 @@ static long getTimeMillis() {
 }
 
 long Threshold::getMillisLimit() {
-   return getTimeMillis()-time_threshold*1000;
+   return getTimeMillis()-parameters.time_threshold*1000;
 }
 
 void Threshold::addEvent() {
    events[eventIndex]=getTimeMillis();
-   if (++eventIndex > count_threshold) {
+   if (++eventIndex > parameters.count_threshold) {
       eventIndex=0;
    }
 }
@@ -68,7 +70,7 @@ void Threshold::addEvent() {
 int Threshold::countEvents() {
    long millisLimit = getMillisLimit();
    int count = 0;
-   for (int i=0;i <= count_threshold;i++) {
+   for (int i=0;i <= parameters.count_threshold;i++) {
       if (events[i] != 0 && events[i]>=millisLimit) {
      	   count++;
        }
@@ -79,15 +81,6 @@ int Threshold::countEvents() {
 bool Threshold::onOOM() {
    addEvent();
    int eventCount = countEvents();
-   fprintf(stderr, "ResourceExhausted! (%d/%d)\n", eventCount, count_threshold);
-   return eventCount > count_threshold;
-}
-
-
-int Threshold::getCount_Threshold() {
-   return count_threshold;
-}
-
-int Threshold::getTime_Threshold() {
-   return time_threshold;
+   fprintf(stderr, "ResourceExhausted! (%d/%d)\n", eventCount, parameters.count_threshold);
+   return eventCount > parameters.count_threshold;
 }
