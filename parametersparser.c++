@@ -44,6 +44,7 @@ AgentParameters ParametersParser::parse(char *options) {
   //sets defaults
   result.count_threshold = 0;
   result.time_threshold = 1;
+  result.print_heap_histogram = 0;
 
   if (options != NULL) {
      // Copy input options since getsubopt modifies its input

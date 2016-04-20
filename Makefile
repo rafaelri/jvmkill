@@ -21,7 +21,7 @@ all: build alltests
 
 build:
 	@echo "=============================================="
-	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ threshold.c++ killaction.c++ base.c++ memory.c++ heaphistogramaction.c++
+	g++ $(CPPFLAGS) -o $(TARGET) jvmkill.c++ agentcontroller.c++ parametersparser.c++ threshold.c++ killaction.c++ base.c++ memory.c++ heaphistogramaction.c++
 	chmod 644 $(TARGET)
 
 clean:
@@ -47,7 +47,7 @@ killactionctests: build
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o killactiontests killactiontests.c++ killaction.c++
 	./killactiontests
 
-agentcontrolerctests:
+agentcontrollerctests:
 	g++ -g -Wall -Werror $(INCLUDE) -ldl -o agentcontrollertests agentcontrollertests.c++ agentcontroller.c++
 	./agentcontrollertests
 
@@ -69,7 +69,7 @@ threadtest-10-2: build
 	@echo "=============================================="
 	$(JAVA_HOME)/bin/javac JvmKillTestThreads.java
 	!($(JAVA_HOME)/bin/java -Xmx1m \
-	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2 \
+	    -agentpath:$(PWD)/$(TARGET)=time=10,count=2,printHeapHistogram=1 \
 	    -cp $(PWD) JvmKillTestThreads)
 
 memtests: memtest0 memtest-10-2

@@ -19,19 +19,37 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "threshold.h"
 #include "agentcontroller.h"
 #include "heaphistogramaction.h"
+#include "killaction.h"
+#include "parametersparser.h"
+
+#define MAX_ACTIONS 2
 
 AgentController::AgentController(jvmtiEnv* jvm) {
   jvmti = jvm;
+  actionCount = 0;
+  actions = new Action*[MAX_ACTIONS];
 }
 
 void AgentController::onOOM() {
+  if (heuristic->onOOM()) {
+    for (int i=0;i<actionCount;i++) {
+      actions[i]->act();
+    }
+  }
 }
 
 void AgentController::setup(char *options) {
-
+  ParametersParser* parser = new ParametersParser();
+  setParameters(parser->parse(options));
 }
 void AgentController::setParameters(AgentParameters parameters) {
-  new HeapHistogramAction(jvmti);
+  heuristic = new Threshold(parameters);
+  if (parameters.print_heap_histogram) {
+      actions[actionCount++] = new HeapHistogramAction(jvmti);
+  }
+  actions[actionCount++] = new KillAction();
+
 }

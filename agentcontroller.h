@@ -27,12 +27,11 @@ public:
    void setup(char *options);
    void setParameters(AgentParameters parameters);
    void onOOM();
-   Action* getConfiguredActions();
-   int getConfiguredActionsCount();
 private:
   jvmtiEnv* jvmti;
   Heuristic* heuristic;
-  Action* actions;
+  Action** actions;
+  int actionCount;
 };
 
 

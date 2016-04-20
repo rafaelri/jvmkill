@@ -16,6 +16,7 @@
 #define threshold_h
 
 #include "heuristic.h"
+#include "parameters.h"
 
 class Threshold: public Heuristic
 {
@@ -23,13 +24,6 @@ public:
    Threshold(AgentParameters param);
 
    bool onOOM();
-
-   void kill();
-
-   int getCount_Threshold();
-
-   int getTime_Threshold();
-
 private:
    // circular buffer containing the timestamps of up to count_threshold + 1 OOMs
    long *events;
@@ -40,9 +34,5 @@ private:
    int countEvents();
    long getMillisLimit();
 };
-
-static inline Heuristic* createHeuristic(AgentParameters params) {
-    return new Threshold(params);
-}
 
 #endif // threshold_h
