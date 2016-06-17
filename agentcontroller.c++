@@ -25,8 +25,9 @@
 #include "heapstatshashtable.h"
 #include "killaction.h"
 #include "parametersparser.h"
+#include "threaddumpaction.h"
 
-#define MAX_ACTIONS 2
+#define MAX_ACTIONS 3
 
 AgentController::AgentController(jvmtiEnv* jvm) {
   jvmti = jvm;
@@ -52,6 +53,7 @@ void AgentController::setParameters(AgentParameters parameters) {
   if (parameters.print_heap_histogram) {
       actions[actionCount++] = new HeapHistogramAction(jvmti, new HeapStatsHashtableFactory());
   }
+  actions[actionCount++] = new ThreadDumpAction(jvmti);
   actions[actionCount++] = new KillAction();
 
 }
