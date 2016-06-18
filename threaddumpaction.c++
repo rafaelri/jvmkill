@@ -35,52 +35,123 @@ void ThreadDumpAction::printThreadDump(JNIEnv* jniEnv, std::ostream *outputStrea
 
 void ThreadDumpAction::printThread(jvmtiStackInfo *stackInfo, std::ostream *outputStream) {
   jvmtiThreadInfo threadInfo;
-  std::string threadName;
+  jvmtiThreadGroupInfo threadGroupInfo;
   jvmti->GetThreadInfo(stackInfo->thread, &threadInfo);
-  threadName.assing(threadInfo.name);
-  outputStream <<  " - " << getThreadState(stackInfo);
+  jvmti->GetThreadGroupInfo(threadInfo.thread_group, &threadGroupInfo);
+  *outputStream << threadInfo.name << " [" << threadGroupInfo.name << "] (" << getThreadState(stackInfo) << ")\n";
+  jvmti->Deallocate((unsigned char *)threadInfo.name);
+  jvmti->Deallocate((unsigned char *)threadGroupInfo.name);
   printFrames(stackInfo->frame_buffer, stackInfo->frame_count, outputStream);
 }
 
-void ThreadDumpAction::printFrames(jvmtiFrameInfo *frames, int frameCount, std::ostream *outputStream) {
+//refactor
+void ThreadDumpAction::printFrames(jvmtiFrameInfo *frames, int frameCount, std::ostream *out) {
+  jclass declaringClass;
+  char *methodName, *className, *fileName;
+  jvmtiFrameInfo frame;
+  int lineNumber;
+
   for (int i = 0; i < frameCount; i++) {
+    frame=frames[i];
+    jvmti->GetMethodDeclaringClass(frame.method, &declaringClass);
+
+    jvmti->GetClassSignature(declaringClass, &className, NULL);
+    *out << "\t" << className;
+    jvmti->Deallocate((unsigned char *)className);
+
+//checar erros (não imprimir se der erro... ver com o que substituir)
+    jvmti->GetMethodName(frame.method, &methodName, NULL, NULL);
+    *out << methodName;
+    jvmti->Deallocate((unsigned char *)methodName);
+
+    jvmtiError err = jvmti->GetSourceFileName(declaringClass, &fileName);
+    if (err != JVMTI_ERROR_NONE) {
+        *out << "(Unknown)";
+    } else {
+        *out << "(" << fileName;
+        jvmti->Deallocate((unsigned char *)fileName);
+        err = getLineNumber(frame, &lineNumber);
+        if (err != JVMTI_ERROR_NONE) {
+          if (err == JVMTI_ERROR_NATIVE_METHOD) {
+            *out << ":native)";
+          }
+          else {
+            *out << ")";
+          }
+        }
+        else {
+          *out << ":" << std::to_string(lineNumber) << ")";
+        }
+    }
+    *out << "\n";
   }
 }
 
-const std::string ThreadDumpAction::getThreadState(jvmtiStackInfo *stackInfo) {
-  switch(stackInfo->state) {
-    case JVMTI_THREAD_STATE_ALIVE:
-      return "Running";
-    case JVMTI_THREAD_STATE_TERMINATED:
-      return "Terminated";
-    case JVMTI_THREAD_STATE_RUNNABLE:
-    return "Runnable";
-    case JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER:
-    return "Blocked";
-    case JVMTI_THREAD_STATE_WAITING:
-    case JVMTI_THREAD_STATE_WAITING_INDEFINITELY:
-    case JVMTI_THREAD_STATE_WAITING_WITH_TIMEOUT:
-      return "Waiting";
-    case JVMTI_THREAD_STATE_PARKED:
-      return "Parked";
-    case JVMTI_THREAD_STATE_SUSPENDED:
-      return "Suspended";
-    case JVMTI_THREAD_STATE_INTERRUPTED:
-      return "Interrupted";
-    case JVMTI_THREAD_STATE_IN_NATIVE:
-      return "Native";
-    case JVMTI_THREAD_STATE_VENDOR_1:
-    case JVMTI_THREAD_STATE_VENDOR_2:
-    case JVMTI_THREAD_STATE_VENDOR_3:
-      return "Reserved";
+jvmtiError ThreadDumpAction::getLineNumber(jvmtiFrameInfo frame, int *lineNumber) {
+    jint locationCount;
+    jvmtiLineNumberEntry* locationTable;
+    jvmtiError err = jvmti->GetLineNumberTable(frame.method, &locationCount, &locationTable);
+  if (err == JVMTI_ERROR_NONE) {
+      *lineNumber = 0;
+      for (int i = 0; i < locationCount; i++) {
+        if (locationTable[i].start_location > frame.location) {
+          break;
+        }
+        *lineNumber = locationTable[i].line_number;
+      }
+      jvmti->Deallocate((unsigned char *)locationTable);
   }
+  return err;
+}
+
+const std::string ThreadDumpAction::getThreadState(jvmtiStackInfo *stackInfo) {
+  int state = stackInfo->state;
+  if (state & JVMTI_THREAD_STATE_IN_NATIVE)
+    return "Native";
+  if (state & JVMTI_THREAD_STATE_INTERRUPTED)
+    return "Interrupted";
+  if (state & JVMTI_THREAD_STATE_SUSPENDED)
+    return "Suspended";
+  if (state & JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER)
+    return "Blocked";
+  if (state & JVMTI_THREAD_STATE_PARKED)
+    return "Parked";
+  if (state & JVMTI_THREAD_STATE_SLEEPING)
+    return "Sleeping"; //sleeping returns also waiting and waiting_with_timeout
+  if (state & JVMTI_THREAD_STATE_WAITING)
+    return "Waiting";
+  if (state & JVMTI_THREAD_STATE_RUNNABLE)
+    return "Runnable";
+  if (state & JVMTI_THREAD_STATE_TERMINATED)
+    return "Terminated";
+  if ((state & JVMTI_THREAD_STATE_ALIVE) == 0)
+    return "New";
   return "Unknown";
 }
 
 ThreadDumpAction::ThreadDumpAction(jvmtiEnv *jvm) {
-	jvmti = jvm;
+  jvmtiCapabilities capabilities;
+
+	/* Get/Add JVMTI capabilities */
+	int err = jvm->GetCapabilities(&capabilities);
+	if (err != JVMTI_ERROR_NONE) {
+		fprintf(stderr, "ERROR: GetCapabilities failed: %d\n", err);
+		throw new std::runtime_error("GetCapabilities failed");
+    }
+
+	capabilities.can_get_line_numbers = 1;
+  capabilities.can_get_source_file_name = 1;
+
+	err = jvm->AddCapabilities(&capabilities);
+	if (err != JVMTI_ERROR_NONE) {
+		fprintf(stderr, "ERROR: AddCapabilities failed: %d\n", err);
+		throw new std::runtime_error("AddCapabilities failed");
+    }
+
+    jvmti = jvm;
 }
 
 void ThreadDumpAction::act(JNIEnv* jniEnv) {
-	printThreadDump(jniEnv, &(std::cout));
+    printThreadDump(jniEnv, &(std::cout));
+    std::cout.flush();
 }

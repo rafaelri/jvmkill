@@ -33,6 +33,7 @@ private:
    void printThreadDump(JNIEnv* jniEnv, std::ostream *outputStream);
    void printThread(jvmtiStackInfo *stackInfo, std::ostream *outputStream);
    void printFrames(jvmtiFrameInfo *frames, int frameCount, std::ostream *outputStream);
+   jvmtiError getLineNumber(jvmtiFrameInfo frame, int *lineNumber);
    const std::string getThreadState(jvmtiStackInfo *stackInfo);
 };
 

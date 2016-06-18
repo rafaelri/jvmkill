@@ -80,7 +80,7 @@ memtests: memtest0 memtest-10-2
 
 memtest0: build
 	@echo "=============================================="
-	$(JAVA_HOME)/bin/javac JvmKillTest.java
+	$(JAVA_HOME)/bin/javac -g JvmKillTest.java
 	!($(JAVA_HOME)/bin/java -Xmx5m \
 	    -agentpath:$(PWD)/$(TARGET)=printHeapHistogram=1 \
 	    -cp $(PWD) JvmKillTest)
